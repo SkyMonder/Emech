@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-echo "=== Установка Emergency Engine (минимальная версия Stockfish) ==="
+echo "=== Установка Emergency Engine ==="
 mkdir -p temp
 cd temp
 wget -q https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-ubuntu-x86-64-bmi2.tar
