@@ -1,0 +1,5 @@
+python-chess
+fastapi
+uvicorn
+gunicorn
+psutil
