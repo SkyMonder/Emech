@@ -8,7 +8,7 @@ engine = None
 # Пороги срабатывания
 MEMORY_THRESHOLD = 80
 EMERGENCY_MODE = False
-MAIN_BOT_URL = os.environ.get("MAIN_BOT_URL", "https://lichess-bot-main.onrender.com")
+MAIN_BOT_URL = os.environ.get("MAIN_BOT_URL", "https://lichessbot-i876.onrender.com")
 
 def send_log(level, message):
     """Отправляет лог главному боту"""
