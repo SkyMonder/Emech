@@ -1,40 +1,49 @@
-import os, chess, chess.engine, traceback, time, psutil, requests
+import os, chess, chess.engine, psutil
 from fastapi import FastAPI, HTTPException
-from datetime import datetime
 
 app = FastAPI()
 engine = None
-
-# Пороги срабатывания
-MEMORY_THRESHOLD = 80
 EMERGENCY_MODE = False
-MAIN_BOT_URL = os.environ.get("MAIN_BOT_URL", "https://lichessbot-i876.onrender.com")
-
-def send_log(level, message):
-    """Отправляет лог главному боту"""
-    try:
-        requests.post(f"{MAIN_BOT_URL}/log", 
-                     json={"level": level, "message": message, "service": "emergency"},
-                     timeout=1)
-    except:
-        pass
+MEMORY_THRESHOLD = 85
 
 def check_memory():
     global EMERGENCY_MODE
-    memory_percent = psutil.virtual_memory().percent
-    if memory_percent > MEMORY_THRESHOLD:
-        if not EMERGENCY_MODE:
-            send_log("WARNING", f"Критический уровень памяти: {memory_percent}%")
-            EMERGENCY_MODE = True
-            if engine:
-                engine.configure({"Hash": 32, "Threads": 1})
-        return True
-    else:
-        if EMERGENCY_MODE:
-            send_log("INFO", f"Память восстановлена: {memory_percent}%")
-            EMERGENCY_MODE = False
-            if engine:
-                engine.configure({"Hash": 64, "Threads": 1})
+    mem = psutil.virtual_memory().percent
+    if mem > MEMORY_THRESHOLD and not EMERGENCY_MODE:
+        EMERGENCY_MODE = True
+        if engine:
+            engine.configure({"Hash": 16, "Threads": 1})
+    elif mem <= MEMORY_THRESHOLD and EMERGENCY_MODE:
+        EMERGENCY_MODE = False
+        if engine:
+            engine.configure({"Hash": 32, "Threads": 1})
+    return EMERGENCY_MODE
+
+def init_engine():
+    global engine
+    engine = chess.engine.SimpleEngine.popen_uci("./emergency_engine")
+    engine.configure({"Skill Level": 18, "Hash": 32, "Threads": 1})
+
+@app.on_event("startup")
+async def startup():
+    init_engine()
+
+@app.get("/health")
+def health():
+    mem = psutil.virtual_memory()
+    return {"status": "ok", "memory_percent": mem.percent, "emergency_mode": EMERGENCY_MODE}
+
+@app.post("/get_move")
+async def get_move(data: dict):
+    try:
+        check_memory()
+        fen = data.get("fen")
+        move_time = min(data.get("move_time", 0.5), 0.3 if EMERGENCY_MODE else 0.5)
+        board = chess.Board(fen)
+        result = engine.play(board, chess.engine.Limit(time=move_time, depth=8))
+        return {"move": result.move.uci() if result.move else None}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))                engine.configure({"Hash": 64, "Threads": 1})
         return False
 
 def init_engine():
